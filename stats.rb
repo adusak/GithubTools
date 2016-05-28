@@ -17,7 +17,7 @@ ZEBRA_START = Time.new(2014, 4).to_i
 ZEBRA_END = Time.new.to_i
 
 result = []
-charts = { rho: Hash.new(0), moto: Hash.new(0), zebra: Hash.new(0) }
+charts = { rho: Hash.new(0), moto: Hash.new(0), zebra: Hash.new(0), total: Hash.new(0) }
 json.each do |o|
   res_o = { name: o['author']['login'] }
   weeks = o['weeks']
@@ -30,6 +30,9 @@ json.each do |o|
   res_o[:total] = res_o[:rho_weeks_total] + res_o[:moto_weeks_total] + res_o[:zebra_weeks_total]
   res_o[:total_real] = weeks.map { |w_o| w_o['c'] }.reduce(&:+)
 
+  weeks.each do |w|
+    charts[:total][w['w']] = charts[:total][w['w']] + w['c']
+  end
   rho_weeks.each do |w|
     charts[:rho][w['w']] = charts[:rho][w['w']] + w['c']
   end
@@ -45,6 +48,12 @@ end
 
 sorted = result.sort_by { |e| e[:total] }.reverse.take(10)
 
+File.open('contributors.csv', 'wb') do |file|
+  sorted.each do |contr|
+    file << "\n#{contr[:name]} & #{contr[:rho_weeks_total]} & #{contr[:moto_weeks_total]} & #{contr[:zebra_weeks_total]} & #{contr[:total_real]} \\\\"
+  end
+end
+
 puts "\nALL THE CONTRIBUTORS\n"
 pp sorted
 
@@ -57,8 +66,6 @@ def group_by_months(weeks)
 
   l_res
 end
-
-pp charts
 
 charts.each do |k, v|
   File.open("#{k}_chart.csv", 'wb') do |file|
